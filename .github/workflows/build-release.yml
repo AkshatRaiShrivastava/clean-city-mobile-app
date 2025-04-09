@@ -1,4 +1,4 @@
-name: Build & Release APK
+name: Build & Deploy APK
 
 on:
   push:
@@ -7,9 +7,13 @@ on:
 
 jobs:
   build:
+    name: Build & Release
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Setup Java
         uses: actions/setup-java@v3
@@ -22,18 +26,32 @@ jobs:
         with:
           flutter-version: "3.16.0"
           channel: "stable"
+          cache: true
 
-      - name: Get Dependencies
+      - name: Get Flutter Dependencies
         run: flutter pub get
 
       - name: Build APK
         run: flutter build apk --release
 
-      - name: Create Release
+      - name: Get version from pubspec
+        id: version
+        run: |
+          VERSION=$(grep 'version:' pubspec.yaml | sed 's/version: //')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/app/outputs/flutter-apk/app-release.apk
+          files: |
+            build/app/outputs/flutter-apk/app-release.apk
           name: Release ${{ github.ref_name }}
+          body: |
+            Clean City App Release ${{ github.ref_name }}
+            Version: ${{ steps.version.outputs.version }}
+
+            ### What's New
+            - Add your release notes here
           draft: false
           prerelease: false
         env:
